@@ -6,7 +6,7 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
@@ -32,12 +32,15 @@ jobs:
       - name: Installer Python
         run: uv python install
 
-      - name: Byg og udgiv MkDocs websitet
+      - name: Byg MkDocs hjemmesiden lokalt på serveren
         run: |
-          uv run mkdocs gh-deploy --force
+          uv run mkdocs build
 
-      - name: Upload det færdige site til GitHub Pages
-        uses: actions/configure-pages@v5
+      - name: Pak og upload de færdige HTML-filer (Artifact)
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # MkDocs spytter altid de færdige filer ud i mappen 'site'
+          path: ./site
 
       - name: Deploy til GitHub Pages
         id: deployment
