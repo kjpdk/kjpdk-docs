@@ -29,3 +29,10 @@ Dette er den officielle dokumentation over mit personlige systemmiljø og hardwa
 1. **Editor:** Neovim opsat med det fuldvoksne **LazyVim** økosystem.
 2. **Pakkehåndtering:** **`uv`** (fra Astral) til lynhurtig styring af Python 3.13-miljøer.
 3. **AI-Agent:** **Antigravity CLI** (`agy`) integreret direkte i terminalen til live kodeanalyse.
+
+---
+
+## 🔗 Relaterede Links
+
+- Se dokumentationen og kildekoden for min [Badminton Manager](../projekter/badminton.md).
+- Gå tilbage til [Forsiden](../index.md).
