@@ -1,0 +1,16 @@
+site_name: KJP-Lab Dokumentation
+site_url: https://kjpdk.github.io/kjpdk-docs
+
+theme:
+  name: material
+  palette:
+    # Tænder for et flot mørkt tema (slate) med blå detaljer
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: blue
+      accent: blue
+
+nav:
+  - Hjem: index.md
+  - Mine Projekter:
+    - Badminton Manager: projekter/badminton.md
