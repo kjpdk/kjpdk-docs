@@ -1,17 +1,16 @@
-# Welcome to MkDocs
+# 💻 Velkommen til KJP-Lab Dokumentation
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Dette er min personlige, centrale vidensbase og it-logbog. Websitet bliver automatisk bygget og udgivet direkte fra mit **KJP-Lab** på Debian 13 (Trixie) via WSL2.
 
-## Commands
+## 🛠️ Mit Miljø & Systemer
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+Her dokumenterer jeg opsætningen af mine udviklingsværktøjer, server-indstillinger og programmer. Det hjælper mig med at minimere den kognitive friktion i hverdagen og holde styr på mine erfaringer.
 
-## Project layout
+## 📁 Aktive Projekter
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+I menuen kan du navigere rundt i mine forskellige systemer:
+
+- **🏸 Badminton Manager:** Mit interaktive, CSV-baserede Python-program til sporing af klubstatistikker mod Thomas, Kim H og Kim P.
+- **⚙️ Dotfiles:** Opsætningen og tilpasningen af mit eget LazyVim- og terminal-miljø.
+
+_Sidst opdateret live via GitHub Actions._
