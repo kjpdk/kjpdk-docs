@@ -1,180 +1,200 @@
-# 🏸 Badminton Manager
+# 🏸 Advanced Badminton Manager
 
-Dette program er et interaktivt, terminal-baseret værktøj bygget i **Python 3.13** til at spore og beregne match-statistikker i min lokale badmintonklub mod **Thomas**, **Kim H** og **Kim P**.
+Dette program er et interaktivt, terminal-baseret analyseværktøj bygget i **Python 3.13** til at spore og beregne avancerede match-statistikker i min lokale badmintonklub mod **Thomas Heidelbach**, **Kim Heidelbach** og **Kim Petersen**[cite: 1].
 
 ---
 
-## 🚀 Hurtig start (Hvordan bruges det?)
+## 🚀 Systemregler & Kampmønster
 
-For at køre programmet i mit **KJP-Lab**, skal jeg blot navigere til projektmappen og bruge `uv` til at starte det:
+- **Faste 3 sæt:** Der spilles altid 3 sæt pr. kamp, uanset om en spiller har vundet de to første[cite: 1].
+- **Kompakte Data:** I datafilen bruges korte initialer (`TH`, `KH`, `KP`), mens programmet automatisk oversætter til fulde navne i terminalen[cite: 1].
+- **Overtid & Gysere:** Systemet holder automatisk styr på almindelige overtids-sæt (22+ point) samt de absolutte gysersæt, der går til grænsen på præcis 30 point[cite: 1].
 
-```bash
-cd ~/Repos/[github.com/kjpdk/kjpdk-lab/dev/python/PyProjekt-001](https://github.com/kjpdk/kjpdk-lab/dev/python/PyProjekt-001)
-uv run main.py
-```
-
-Når programmet starter, mødes man af en interaktiv hovedmenu:
-
-1. **Vis aktuel statistik:** Beregner og udskriver en flot tabel med win-rate og point.
-2. **Registrer et nyt kampresultat:** Spørger efter modstanderens navn samt point, gemmer det i datafilen og viser den opdaterede tabel med det samme.
-3. **Luk programmet:** Afslutter applikationen rent.
+---
 
 ## 📂 Dataformat (`kampe.csv`)
 
-Al data gemmes eksternt i en simpel tekstfil kaldet `kampe.csv`. Det betyder, at jeg også kan åbne og redigere mine resultater direkte i f.eks. Google Sheets eller min Obsidian Zettelkasten. Filen er opbygget således:
+Hver række i vores CSV-fil repræsenterer ét spillet sæt. Dette sikrer et klippestabilt datagrundlag, hvor Python fejlfrit kan beregne point- og sætforskelle:
 
-```markdown
-modstander,egne_point,modstander_point
-Thomas,21,18
-Kim H,19,21
-Kim P,21,15
+```csv
+dato,kamp_id,spiller_1,spiller_2,point_1,point_2
+02-06-2026,1,TH,KH,21,13
+02-06-2026,1,TH,KH,21,17
+02-06-2026,1,TH,KH,16,21
+02-06-2026,2,TH,KP,21,15
+02-06-2026,2,TH,KP,25,27
+02-06-2026,2,TH,KP,14,21
+02-06-2026,3,KP,KH,21,12
+02-06-2026,3,KP,KH,21,16
+02-06-2026,3,KP,KH,21,13
 ```
 
-## 🧠 Sådan fungerer koden (Pædagogisk gennemgang)
+## 💻 Komplet Avanceret Kildekode (main.py)
 
-Programmet er opdelt i små, overskuelige funktioner, som har hver deres ansvarsområde:
+Her er den komplette, optimerede kildekode, som den afvikles via uv run main.py:
 
-- `indlaes_kampe_fra_csv(filnavn):` Åbner datafilen og bruger Pythons indbyggede `csv.DictReader`. Den omdanner automatisk hver række til en ordbog (dictionary) og konverterer pointene fra tekst til rigtige heltal (`int`), så vi kan regne på dem.
-- `gem_kamp_til_csv(...):`` Åbner filen i `a` (append) tilstand. Det betyder, at den hopper helt ned i bunden af filen og tilføjer det nye resultat uden at røre ved eller slette dine gamle kampe.
-- `beregn_statistik(kampe):` Løber alle registrerede kampe igennem med en løkke (`for kamp in kampe`). Den tæller, hvor mange gange dine point var højere end modstanderens, og beregner din samlede sejsprocent (Win Rate) med formlen:` (vundet / antal_kampe) * 100`.
-
-## 💻 Komplet Kildekode (`main.py`)
-
-Her er den fulde kode, som den er implementeret i mit Git-arkiv:
-
-```python
+```Python
 import csv
 from tabulate import tabulate
 
+# Global oversættelse af initialer til fulde navne
+NAVNE_MAP = {
+    "TH": "Thomas Heidelbach",
+    "KH": "Kim Heidelbach",
+    "KP": "Kim Petersen"
+}
 
-def indlaes_kampe_fra_csv(filnavn):
-    kampe = []
+
+def indlaes_saet_fra_csv(filnavn):
+    saet_liste = []
     try:
         with open(filnavn, mode="r", encoding="utf-8") as fil:
             csv_laeser = csv.DictReader(fil)
             for raekke in csv_laeser:
-                kampe.append(
-                    {
-                        "modstander": raekke["modstander"],
-                        "egne_point": int(raekke["egne_point"]),
-                        "modstander_point": int(raekke["modstander_point"]),
-                    }
-                )
+                saet_liste.append({
+                    "dato": raekke["dato"],
+                    "kamp_id": int(raekke["kamp_id"]),
+                    "spiller_1": raekke["spiller_1"],
+                    "spiller_2": raekke["spiller_2"],
+                    "point_1": int(raekke["point_1"]),
+                    "point_2": int(raekke["point_2"])
+                })
     except FileNotFoundError:
         pass
-    return kampe
+    return saet_liste
 
 
-def gem_kamp_til_csv(filnavn, modstander, egne_point, modstander_point):
-    with open(filnavn, mode="a", encoding="utf-8", newline="") as fil:
-        feltnavne = ["modstander", "egne_point", "modstander_point"]
-        csv_skriver = csv.DictWriter(fil, fieldnames=feltnavne)
+def analyser_data(saet_liste, filter_spiller_a=None, filter_spiller_b=None):
+    stats = {spiller: {"kampe_vundet": 0, "saet_vundet": 0, "point_ialt": 0} for spiller in NAVNE_MAP.keys()}
 
-        if fil.tell() == 0:
-            csv_skriver.writeheader()
+    samlet_til_30 = 0
+    samlet_overtid = 0
+    storste_forskel = -1
+    storste_forskel_detaljer = ""
+    kampe_saet_taeller = {}
 
-        csv_skriver.writerow(
-            {
-                "modstander": modstander,
-                "egne_point": egne_point,
-                "modstander_point": modstander_point,
-            }
-        )
+    for saet in saet_liste:
+        s1, s2 = saet["spiller_1"], saet["spiller_2"]
+        p1, p2 = saet["point_1"], saet["point_2"]
+
+        if filter_spiller_a and filter_spiller_b:
+            if not ((s1 == filter_spiller_a and s2 == filter_spiller_b) or
+                    (s1 == filter_spiller_b and s2 == filter_spiller_a)):
+                continue
+
+        stats[s1]["point_ialt"] += p1
+        stats[s2]["point_ialt"] += p2
+
+        saet_vinder = s1 if p1 > p2 else s2
+        saet_taber = s2 if p1 > p2 else s1
+        vinder_point = max(p1, p2)
+        taber_point = min(p1, p2)
+
+        stats[saet_vinder]["saet_vundet"] += 1
+
+        if p1 == 30 or p2 == 30:
+            samlet_til_30 += 1
+        elif vinder_point >= 22:
+            samlet_overtid += 1
+
+        nuvaerende_forskel = vinder_point - taber_point
+        if nuvaerende_forskel > storste_forskel:
+            storste_forskel = nuvaerende_forskel
+            storste_forskel_detaljer = f"{nuvaerende_forskel} point ({NAVNE_MAP[saet_vinder]} mod {NAVNE_MAP[saet_taber]}: {vinder_point}-{taber_point})"
+
+        kamp_noegle = (saet["dato"], saet["kamp_id"])
+        if kamp_noegle not in kampe_saet_taeller:
+            kampe_saet_taeller[kamp_noegle] = {s1: 0, s2: 0}
+        kampe_saet_taeller[kamp_noegle][saet_vinder] += 1
+
+    for kamp_data in kampe_saet_taeller.values():
+        spillere_i_kamp = list(kamp_data.keys())
+        if len(spillere_i_kamp) == 2:
+            if kamp_data[spillere_i_kamp[0]] > kamp_data[spillere_i_kamp[1]]:
+                stats[spillere_i_kamp[0]]["kampe_vundet"] += 1
+            else:
+                stats[spillere_i_kamp[1]]["kampe_vundet"] += 1
+
+    return stats, samlet_til_30, samlet_overtid, storste_forskel_detaljer
 
 
-def beregn_statistik(kampe):
-    if not kampe:
-        return None
+def vis_samlet_statistik(saet_liste):
+    stats, til_30, overtid, forskel_tekst = analyser_data(saet_liste)
 
-    samlet_vundet = 0
-    samlet_point_vundet = 0
-    samlet_point_tabt = 0
+    tabel_data = []
+    for init, data in stats.items():
+        tabel_data.append([
+            NAVNE_MAP[init],
+            data["kampe_vundet"],
+            data["saet_vundet"],
+            data["point_ialt"]
+        ])
 
-    for kamp in kampe:
-        samlet_point_vundet += kamp["egne_point"]
-        samlet_point_tabt += kamp["modstander_point"]
+    print("\n" + "="*50)
+    print("         KJP-LAB SAMLET SPILSTATUS (I ALT)")
+    print("="*50)
+    print(tabulate(tabel_data, headers=["Spiller", "Kampe Vundet", "Sæt Vundet", "Point Ialt"], tablefmt="fancy_grid"))
 
-        if kamp["egne_point"] > kamp["modstander_point"]:
-            samlet_vundet += 1
-
-    antal_kampe = len(kampe)
-    win_rate = (samlet_vundet / antal_kampe) * 100
-
-    return {
-        "antal_kampe": antal_kampe,
-        "vundet": samlet_vundet,
-        "win_rate": win_rate,
-        "point_vundet": samlet_point_vundet,
-        "point_tabt": samlet_point_tabt,
-    }
+    print(f"\n🔥 Gysersæt (Gået til præcis 30 point): {til_30}")
+    print(f"📈 Sæt i overtid (Vundet med 22+ point): {overtid}")
+    print(f"🎯 Største point-forskel i et sæt: {forskel_tekst}")
 
 
-def vis_statistik(filnavn):
-    badminton_kampe = indlaes_kampe_fra_csv(filnavn)
-    stats = beregn_statistik(badminton_kampe)
+def vis_indbyrdes_statistik(saet_liste):
+    print("\n--- VÆLG INDBYRDES OPGØR ---")
+    print("1. Thomas Heidelbach mod Kim Heidelbach")
+    print("2. Thomas Heidelbach mod Kim Petersen")
+    print("3. Kim Petersen mod Kim Heidelbach")
 
-    if stats is None:
-        print("\nℹ Der er ikke registreret nogen kampe i systemet endnu.")
+    valg = input("Vælg opgør (1-3): ").strip()
+
+    if valg == "1":
+        pa, pb = "TH", "KH"
+    elif valg == "2":
+        pa, pb = "TH", "KP"
+    elif valg == "3":
+        pa, pb = "KP", "KH"
+    else:
+        print("⚠ Ugyldigt valg.")
         return
+
+    stats, _, _, _ = analyser_data(saet_liste, filter_spiller_a=pa, filter_spiller_b=pb)
 
     tabel_data = [
-        ["Antal Kampe Spillet", stats["antal_kampe"]],
-        ["Kampe Vundet", stats["vundet"]],
-        ["Sejsprocent (Win Rate)", f"{stats['win_rate']:.1f}%"],
-        ["Point Scoret (Egne)", stats["point_vundet"]],
-        ["Point Tabt (Modstander)", stats["point_tabt"]],
+        [NAVNE_MAP[pa], stats[pa]["kampe_vundet"], stats[pa]["saet_vundet"], stats[pa]["point_ialt"]],
+        [NAVNE_MAP[pb], stats[pb]["kampe_vundet"], stats[pb]["saet_vundet"], stats[pb]["point_ialt"]]
     ]
 
-    print(f"\n=== KJP-LAB BADMINTON STATISTIK (Hentet fra {filnavn}) ===")
-    print(tabulate(tabel_data, headers=["Metrik", "Resultat"], tablefmt="fancy_grid"))
-
-
-def modtag_heltal(ledetekst):
-    while True:
-        try:
-            return int(input(ledetekst))
-        except ValueError:
-            print("⚠ Fejl: Du skal indtaste et gyldigt heltal. Prøv igen.")
-
-
-def tilfoej_ny_kamp(filnavn):
-    print("\n--- REGISTRER NY BADMINTON KAMP ---")
-    modstander = input("Indtast modstanderens navn: ").strip()
-
-    if not modstander:
-        print("⚠ Fejl: Modstanderens navn må ikke være tomt.")
-        return
-
-    egne_point = modtag_heltal("Indtast dine point: ")
-    modstander_point = modtag_heltal("Indtast modstanderens point: ")
-
-    gem_kamp_til_csv(filnavn, modstander, egne_point, modstander_point)
-    print(f"✔ Kampen mod {modstander} blev gemt!")
+    print("\n" + "="*50)
+    print(f"    INDBYRDES STATUS: {NAVNE_MAP[pa]} vs {NAVNE_MAP[pb]}")
+    print("="*50)
+    print(tabulate(tabel_data, headers=["Spiller", "Kampe Vundet", "Sæt Vundet", "Point Ialt"], tablefmt="fancy_grid"))
 
 
 def main():
     filnavn = "kampe.csv"
 
     while True:
-        print("\n=================================")
-        print("    KJP-LAB BADMINTON MANAGER    ")
+        saet_liste = indlaes_saet_fra_csv(filnavn)
+
+        print("\n" + "="*35)
+        print("    KJP-LAB ADVANCED BADMINTON    ")
         print("=================================")
-        print("1. Vis aktuel statistik")
-        print("2. Registrer et nyt kampresultat")
+        print("1. Vis samlet klub-statistik")
+        print("2. Vis indbyrdes statistik (Opgør)")
         print("3. Luk programmet")
 
         valg = input("Vælg en mulighed (1-3): ").strip()
 
         if valg == "1":
-            vis_statistik(filnavn)
+            vis_samlet_statistik(saet_liste)
         elif valg == "2":
-            tilfoej_ny_kamp(filnavn)
-            vis_statistik(filnavn)
+            vis_indbyrdes_statistik(saet_liste)
         elif valg == "3":
-            print("\nTak for i dag! Hav en god træning i klubben.")
+            print("\nSystemet lukkes. Hav en fantastisk tirsdag/fredag i hallen!")
             break
         else:
-            print("⚠ Ugyldigt valg. Tast venligst 1, 2 eller 3.")
+            print("⚠ Ugyldigt valg. Prøv igen.")
 
 
 if __name__ == "__main__":
